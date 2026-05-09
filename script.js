@@ -24,38 +24,49 @@ const ball = {
     y: canvas.height / 2,
     vx: 4,
     vy: 4,
-    radius: 5
+    radius: 5,
+    color: "white"
 };
 
-// SCORE (cargado desde localStorage)
+// SCORE
 let ScorePlayer = parseInt(localStorage.getItem("ScorePlayer")) || 0;
 let ScoreEnemy = parseInt(localStorage.getItem("ScoreEnemy")) || 0;
 
-// Draw
+// TOUCH CONTROL VARIABLES
+let isTouching = false;
+let touchOffsetY = 0;
+
+// DRAW
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Score
     ctx.fillStyle = "white";
     ctx.font = "30px Arial";
     ctx.fillText(ScorePlayer, canvas.width / 4, 50);
     ctx.fillText(ScoreEnemy, (canvas.width / 4) * 3, 50);
 
+    // Paddles
     ctx.fillRect(player1.x, player1.y, paddleWidth, paddleHeight);
     ctx.fillRect(enemy.x, enemy.y, paddleWidth, paddleHeight);
 
+    // Ball
+    ctx.fillStyle = ball.color;
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     ctx.fill();
 }
 
-// Update
+// UPDATE
 function update() {
 
     ball.x += ball.vx;
     ball.y += ball.vy;
 
+    // Rebote arriba/abajo
     if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
         ball.vy *= -1;
+        changeBallColor();
     }
 
     // Player collision
@@ -66,6 +77,7 @@ function update() {
     ) {
         ball.vx = Math.abs(ball.vx);
         ball.vy += (Math.random() - 0.5) * 2;
+        changeBallColor();
     }
 
     // Enemy collision
@@ -76,10 +88,13 @@ function update() {
     ) {
         ball.vx = -Math.abs(ball.vx);
         ball.vy += (Math.random() - 0.5) * 2;
+        changeBallColor();
     }
 
+    // IA enemy
     enemy.y += (ball.y - enemy.y) * 0.05;
 
+    // limitar jugador
     player1.y = Math.max(0, Math.min(canvas.height - paddleHeight, player1.y));
 
     checkGameOver();
@@ -90,24 +105,54 @@ function update() {
 
 update();
 
-// Controls
+
+// CONTROLES TECLADO
 window.addEventListener('keydown', (e) => { 
-    if (e.key === 'ArrowUp') player1.y -= 70;
-    if (e.key === 'ArrowDown') player1.y += 70;
+    if (e.key === 'ArrowUp') player1.y -= 90;
+    if (e.key === 'ArrowDown') player1.y += 90;
 });
 
-// Reset
+
+// CONTROLES TÁCTILES (DRAG REAL)
+canvas.addEventListener("touchstart", (e) => {
+    isTouching = true;
+
+    const touchY = e.touches[0].clientY;
+    touchOffsetY = touchY - player1.y;
+});
+
+canvas.addEventListener("touchmove", (e) => {
+    if (!isTouching) return;
+
+    const touchY = e.touches[0].clientY;
+
+    player1.y = touchY - touchOffsetY;
+
+    player1.y = Math.max(
+        0,
+        Math.min(canvas.height - paddleHeight, player1.y)
+    );
+});
+
+canvas.addEventListener("touchend", () => {
+    isTouching = false;
+});
+
+
+// RESET
 function resetGame() {
     ball.x = canvas.width / 2;
     ball.y = canvas.height / 2;
     ball.vx = 4;
     ball.vy = 4;
+    ball.color = "white";
 
     player1.y = canvas.height / 2 - paddleHeight / 2;
     enemy.y = canvas.height / 2 - paddleHeight / 2;
 }
 
-// Game Over + Score
+
+// GAME OVER
 function checkGameOver() {
 
     if (ball.x - ball.radius <= 0) {
@@ -124,7 +169,6 @@ function checkGameOver() {
         return;
     }
 
-    // ✔ CORREGIDO (victoria a 50 puntos)
     if (ScorePlayer >= 50 || ScoreEnemy >= 50) {
         ScorePlayer = 0;
         ScoreEnemy = 0;
@@ -133,8 +177,19 @@ function checkGameOver() {
     }
 }
 
-// Local Storage
+
+// LOCAL STORAGE
 function saveScore() {
     localStorage.setItem("ScorePlayer", ScorePlayer);
     localStorage.setItem("ScoreEnemy", ScoreEnemy);
+}
+
+
+// CAMBIO COLOR
+function changeBallColor() {
+    const r = Math.floor(Math.random() * 256);
+    const g = Math.floor(Math.random() * 256);
+    const b = Math.floor(Math.random() * 256);
+
+    ball.color = `rgb(${r}, ${g}, ${b})`;
 }
